@@ -1,12 +1,12 @@
 //
-//  SGTabView.h
-//  SGTabs
+//  SGCredentialsPrompt.h
+//  Foxbrowser
 //
-//  Created by simon on 07.06.12.
+//  Created by Simon Grätzer on 20.08.12.
 //
 //
-//  Copyright (c) 2012 Simon Grätzer
-//  
+//  Copyright (c) 2012 Simon Peter Grätzer
+//
 //  Licensed under the Apache License, Version 2.0 (the "License");
 //  you may not use this file except in compliance with the License.
 //  You may obtain a copy of the License at
@@ -20,16 +20,12 @@
 //  limitations under the License.
 //
 
-
 #import <UIKit/UIKit.h>
-#import <CoreText/CoreText.h>
 
-@interface SGTabView : UIView
+@interface SGCredentialsPrompt : UIAlertView <UITextFieldDelegate>
+@property (strong, nonatomic) UITextField *usernameField;
+@property (strong, nonatomic) UITextField *passwordField;
+@property (strong, nonatomic) UISegmentedControl* rememberCredentials;
 
-@property (nonatomic, readonly, strong) UIButton *closeButton;
-@property (nonatomic, strong) NSString *title;
-@property (assign, nonatomic) BOOL selected;
-
-- (id)initWithFrame:(CGRect)frame title:(NSString *)title;
-
+- (id)initWithUsername:(NSString *)username persistence:(NSURLCredentialPersistence)persistence;
 @end

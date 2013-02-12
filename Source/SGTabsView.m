@@ -25,8 +25,6 @@
 #import "SGTabsViewController.h"
 #import "SGTabDefines.h"
 
-#define kMARGIN 2.5
-
 @interface SGTabsView ()
 - (CGFloat)tabWidth:(NSUInteger)count;
 @end
@@ -39,7 +37,7 @@
     self = [super initWithFrame:frame];
     if (self) {
         self.backgroundColor = [UIColor clearColor];
-        self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleRightMargin| UIViewAutoresizingFlexibleLeftMargin;
+        self.autoresizingMask = UIViewAutoresizingFlexibleWidth;
         self.autoresizesSubviews = YES;
     }
     return self;
@@ -60,10 +58,11 @@
 - (void)addTab:(NSString *)title {
     CGFloat width = [self tabWidth:self.tabs.count+1];
     
-    CGRect frame = CGRectMake(self.bounds.size.width, 0, width, self.bounds.size.height - kMARGIN);
+    // Float the subview in from rigth
+    CGRect frame = CGRectMake(self.bounds.size.width, 0, width, self.bounds.size.height - kTabsBottomMargin);
     SGTabView *newTab = [[SGTabView alloc] initWithFrame:frame title:title];
-    //newTab.closeButton.hidden = !self.tabsController.editing;
     
+    // Setup gesture recognizers
     UITapGestureRecognizer *tapG = [[UITapGestureRecognizer alloc] initWithTarget:self 
                                                                            action:@selector(handleTap:)];
     tapG.numberOfTapsRequired = 1;
@@ -76,27 +75,27 @@
     panG.delegate = self;
     [newTab addGestureRecognizer:panG];
     
-    _selected = self.tabs.count;
+    // Setup close button
+    UIControlEvents event = [[UIDevice currentDevice].systemVersion doubleValue] < 6 ? UIControlEventTouchCancel : UIControlEventTouchUpInside;
+    [newTab.closeButton addTarget:self action:@selector(handleRemove:) forControlEvents:event];
+    
+    // Add the tab
     [self.tabs addObject:newTab];
     
     [self addSubview:newTab];
     for (int i = 0; i < self.tabs.count; i++) {
         SGTabView *tab = [self.tabs objectAtIndex:i];
-        tab.frame = CGRectMake(width*i + kMARGIN, 0, width, self.bounds.size.height - kMARGIN);
-        if (i == self.tabs.count-1) {
-            tab.alpha = 1.0;
-            [self bringSubviewToFront:tab];
-        } else {
-            tab.alpha = 0.7;
-        }
+        // By setting the real position after the view is added, we create a float from rigth transition
+        tab.frame = CGRectMake(width*i, 0, width, self.bounds.size.height - kTabsBottomMargin);
         [tab setNeedsDisplay];
     }
+    [self bringSubviewToFront:[self.tabs objectAtIndex:self.selected]];
 }
 
 - (void)removeTab:(NSUInteger)index {
     SGTabView *oldTab = [self.tabs objectAtIndex:index];
     if (oldTab) {
-        [self.tabs removeObjectAtIndex:index]; 
+        [self.tabs removeObjectAtIndex:index];
         [oldTab removeFromSuperview];
         [self resizeTabs];
     }
@@ -107,10 +106,19 @@
     for (int i = 0; i < self.tabs.count; i++) {
         SGTabView *tab = [self.tabs objectAtIndex:i];
         if (i == selected) {
-            tab.alpha = 1.0;
+            if ([self.tabsController.delegate respondsToSelector:@selector(canRemoveTab:)]) {
+                tab.closeButton.hidden = ![self.tabsController.delegate canRemoveTab:[self.tabsController.tabContents objectAtIndex:i]];
+            } else {
+                tab.closeButton.hidden = NO;
+            }
+            
+            tab.selected = YES;
+            [tab setNeedsLayout];
             [self bringSubviewToFront:tab];
         } else {
-            tab.alpha = 0.7;
+            tab.closeButton.hidden = YES;
+            tab.selected = NO;
+            [tab setNeedsLayout];
         }
         [tab setNeedsDisplay];
     }
@@ -119,7 +127,7 @@
 #pragma mark - Helpers
 - (CGFloat)tabWidth:(NSUInteger)count {
     if (count > 0)
-        return (self.bounds.size.width - 2*kMARGIN)/count;
+        return self.bounds.size.width/count;
     else
         return self.bounds.size.width;
 }
@@ -129,11 +137,19 @@
     CGFloat width = [self tabWidth:self.tabs.count];
     for (int i = 0; i < self.tabs.count; i++) {
         SGTabView *tab = [self.tabs objectAtIndex:i];
-        tab.frame = CGRectMake(width*i + kMARGIN, 0, width, self.bounds.size.height - kMARGIN);
+        tab.frame = CGRectMake(width*i, 0, width, self.bounds.size.height - kTabsBottomMargin);
     }
 }
                                     
-#pragma mark - Gestures
+#pragma mark - Actions
+
+- (IBAction)handleRemove:(id)sender {
+    UIView *v = sender;
+    NSUInteger index = [self.tabs indexOfObject:v.superview];
+    if (index != NSNotFound) {
+        [self.tabsController removeIndex:index];
+    }
+}
 
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
     return NO;
@@ -157,7 +173,7 @@
         CGPoint center = CGPointMake(sender.view.center.x + position.x, sender.view.center.y);
         
         // Don't move the tab out of the view
-        if (center.x < self.bounds.size.width - kMARGIN &&  center.x > kMARGIN) {
+        if (center.x < self.bounds.size.width && center.x > 0) {
             sender.view.center = center;
             [sender setTranslation:CGPointZero inView:self];
             
@@ -176,7 +192,7 @@
                     [self.tabsController.tabContents exchangeObjectAtIndex:panPosition withObjectAtIndex:nextPos];
                     
                     [UIView animateWithDuration:0.5 animations:^{// Move the item on the old position of the panTab
-                        next.frame = CGRectMake(width*panPosition + kMARGIN, 0, width, self.bounds.size.height - kMARGIN);
+                        next.frame = CGRectMake(width*panPosition, 0, width, self.bounds.size.height - kTabsBottomMargin);
                     }];
                 }
             }

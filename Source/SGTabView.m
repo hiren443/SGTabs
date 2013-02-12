@@ -27,56 +27,48 @@
 
 @interface SGTabView ()
 @property (nonatomic, strong) UILabel *titleLabel;
-@property (nonatomic, strong) UIButton *closeButton;
+@property (nonatomic, strong) UIColor *tabColor;
+@property (nonatomic, strong) UIColor *tabDarkerColor;
 @end
 
-@implementation SGTabView
-@synthesize titleLabel, closeButton;
-@synthesize tabColor;
+@implementation SGTabView {
+    CGSize _tSize;
+    CGFloat _cap;
+}
 @dynamic title;
 
 - (id)initWithFrame:(CGRect)frame title:(NSString *)title
 {
-    self = [super initWithFrame:frame];
-    if (self) {
+    if (self = [super initWithFrame:frame]) {
         self.backgroundColor = [UIColor clearColor];
-        self.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-        CGFloat cap = kCornerRadius/frame.size.width;
-        self.contentStretch = CGRectMake(cap, 0.0, 1.0, 1-cap);
         self.tabColor = kTabColor;
-                
+        self.tabDarkerColor = kTabDarkerColor;
+        self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
+        self.exclusiveTouch = YES;
+        _cap = 2*kCornerRadius/frame.size.width;
+        self.contentStretch = CGRectMake(_cap, 0., 1.-_cap, 1.);
+        
         self.titleLabel = [[UILabel alloc] initWithFrame:CGRectZero];
         self.titleLabel.textAlignment = UITextAlignmentCenter;
         self.titleLabel.lineBreakMode = UILineBreakModeTailTruncation;
         self.titleLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
         self.titleLabel.backgroundColor = [UIColor clearColor];
-        self.titleLabel.font = [UIFont boldSystemFontOfSize:14.0];
+        self.titleLabel.font = [UIFont fontWithName:@"HelveticaNeue-Bold" size:14.0];
         self.titleLabel.minimumFontSize = 14.0;
         self.titleLabel.textColor = [UIColor darkGrayColor];
-        self.titleLabel.shadowColor = [UIColor colorWithWhite:0.6 alpha:0.5];
-        self.titleLabel.shadowOffset = CGSizeMake(0, 0.5);
-        
         self.title = title;
         [self addSubview:self.titleLabel];
         
-        
-//        self.closeButton = [UIButton buttonWithType:UIButtonTypeRoundedRect];
-//        [self.closeButton setTitle:@"Hello" forState:UIControlStateNormal];
-//        [self.closeButton setImage:[UIImage imageNamed:@"cross.png"]
-//                          forState:UIControlStateNormal];
-//        [self  addSubview:self.closeButton];
+        _closeButton = [UIButton buttonWithType:UIButtonTypeCustom];
+        self.closeButton.autoresizingMask = UIViewAutoresizingFlexibleRightMargin;
+        [self.closeButton setContentVerticalAlignment:UIControlContentVerticalAlignmentCenter];
+        [self.closeButton setTitle:@"x" forState:UIControlStateNormal];
+        [self.closeButton setTitleColor:[UIColor grayColor] forState:UIControlStateNormal];
+        [self.closeButton setShowsTouchWhenHighlighted:YES];
+        self.closeButton.titleLabel.font = [UIFont fontWithName:@"HelveticaNeue-Bold" size:17.0];
+        [self addSubview:self.closeButton];
     }
     return self;
-}
-
-- (void)layoutSubviews {
-    CGSize t = _tSize;
-    if (t.width > self.bounds.size.width*0.75)
-        t.width = self.bounds.size.width*0.75;
-    CGRect b = self.bounds;
-    self.titleLabel.frame = CGRectMake((b.size.width - t.width)/2,
-                                       (b.size.height - t.height)/2,
-                                       t.width, t.height);
 }
 
 - (void)setTitle:(NSString *)title {
@@ -86,6 +78,28 @@
 
 - (NSString *)title {
     return self.titleLabel.text;
+}
+
+- (void)layoutSubviews {
+    CGRect b = self.bounds;
+    CGFloat margin = kCornerRadius;
+    
+    CGSize t = _tSize;
+    if (t.width > b.size.width*0.75) {
+        t.width = b.size.width*0.75 - 2*margin;
+    }
+        
+    if(!self.closeButton.hidden) {
+        self.titleLabel.frame = CGRectMake((b.size.width - t.width)/2 + margin,
+                                           (b.size.height - t.height)/2,
+                                           t.width, t.height);
+    } else {
+        self.titleLabel.frame = CGRectMake((b.size.width - t.width)/2,
+                                           (b.size.height - t.height)/2,
+                                           t.width, t.height);
+    }
+    
+    self.closeButton.frame =  CGRectMake(margin, 0, 25, b.size.height);
 }
 
 - (void)drawRect:(CGRect)rect {
@@ -113,19 +127,18 @@
     // Top rigth
     CGPathAddArc(path, NULL, tabRight, tabTop + kCornerRadius, kCornerRadius, M_PI, -M_PI_2, NO);
     CGPathAddLineToPoint(path, NULL, tabRight, tabTop);
+    CGPathAddLineToPoint(path, NULL, tabLeft, tabTop);
     CGPathCloseSubpath(path);
     
     CGContextRef ctx = UIGraphicsGetCurrentContext();
     
     // Fill with current tab color
-    CGColorRef startColor = [self.tabColor CGColor];
+    CGColorRef startColor = self.selected ? self.tabColor.CGColor : self.tabDarkerColor.CGColor;
     
-    CGContextSaveGState(ctx);
-    CGContextAddPath(ctx, path);
     CGContextSetFillColorWithColor(ctx, startColor);
     CGContextSetShadow(ctx, CGSizeMake(0, -1), kShadowRadius);
+    CGContextAddPath(ctx, path);
     CGContextFillPath(ctx);
-    CGContextRestoreGState(ctx);
     
     CGPathRelease(path);
     

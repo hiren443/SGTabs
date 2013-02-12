@@ -27,28 +27,24 @@
 @optional
 - (void)willShowTab:(UIViewController *)viewController;
 - (void)willRemoveTab:(UIViewController *)viewController;
-- (BOOL)canRemoveTab:(UIViewController *)viewController;// TODO
+- (BOOL)canRemoveTab:(UIViewController *)viewController;
 
 @end
 
 @class SGToolbar, SGTabsView;
 
-@interface SGTabsViewController : UIViewController {
-    BOOL _editable;
-    CGRect _contentFrame;
-    BOOL _toobarVisible;
-}
+@interface SGTabsViewController : UIViewController 
 
 /// Is an optional delegate
 @property (nonatomic, weak) id<SGTabsViewControllerDelegate> delegate;
-@property (nonatomic, readonly) BOOL editable;
 
 /// Currently visible view controller
 @property (nonatomic, readonly, weak) UIViewController *currentViewController;
-
+/// For internal use
 @property (nonatomic, readonly, strong) NSMutableArray *tabContents;
+/// The frame in wihich content is shown
+@property (nonatomic, readonly) CGRect contentFrame;
 
-- (id)initEditable:(BOOL)editable;
 
 /// Adds a tab, don't add the same instance twice!
 - (void)addTab:(UIViewController *)viewController;

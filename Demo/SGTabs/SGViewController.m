@@ -22,20 +22,26 @@
 
 #import "SGViewController.h"
 #import "SGTabsViewController.h"
+#import "UIViewController+TabsController.h"
+#import "SGURLProtocol.h"
 @interface SGViewController ()
 
 @end
 
 @implementation SGViewController
-@synthesize webView, textField = _textField;
+@synthesize webView = _webView, textField = _textField;
 
 - (void)viewDidLoad
 {
     [super viewDidLoad];
     
     self.webView.delegate = self;
-    self.textField = [[UITextField alloc] initWithFrame:CGRectMake(0, 0, 300.0, 25.0)];
+    self.webView.backgroundColor = [UIColor scrollViewTexturedBackgroundColor];
+    
+    self.textField = [[UITextField alloc] initWithFrame:CGRectMake(0, 0, 400.0, 30.0)];
+    self.textField.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     self.textField.backgroundColor = [UIColor whiteColor];
+    self.textField.borderStyle = UITextBorderStyleRoundedRect;
     self.textField.text = @"http://www.google.com";
     self.textField.clearButtonMode = UITextFieldViewModeAlways;
     self.textField.keyboardType = UIKeyboardTypeURL;
@@ -47,29 +53,50 @@
     
     UIBarButtonItem *space = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace
                                                                            target:nil action:nil];
-    UIBarButtonItem *space2 = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace
-                                                                           target:nil action:nil];
     UIBarButtonItem *reload = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemRefresh
                                                                             target:self action:@selector(reload:)]; 
     UIBarButtonItem *add = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd 
                                                                          target:self 
                                                                          action:@selector(add:)];
-    UIBarButtonItem *trash = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemTrash 
-                                                                           target:self 
-                                                                           action:@selector(remove:)];
-    SGTabsViewController *tabs = (SGTabsViewController *) self.parentViewController;
-    if (tabs.count)
-        self.toolbarItems = [NSArray arrayWithObjects:space,urlBar,space2,trash,reload,add,nil];
-    else
-        self.toolbarItems = [NSArray arrayWithObjects:space,urlBar,space2,reload,add,nil];
+
     
+    self.toolbarItems = [NSArray arrayWithObjects:space,urlBar,space,reload,add,nil];
+    [SGURLProtocol registerProtocol];
 }
 
 - (void)viewDidUnload
 {
+#ifdef DEBUG
+    NSLog(@"%s", __FUNCTION__);
+#endif
+    [SGURLProtocol unregisterProtocol];
     [self setTextField:nil];
     [self setWebView:nil];
     [super viewDidUnload];
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+#ifdef DEBUG
+    NSLog(@"%s", __FUNCTION__);
+#endif
+}
+
+- (void)viewDidAppear:(BOOL)animated {
+#ifdef DEBUG
+    NSLog(@"%s", __FUNCTION__);
+#endif
+}
+
+- (void)viewWillDisappear:(BOOL)animated {
+#ifdef DEBUG
+    NSLog(@"%s", __FUNCTION__);
+#endif
+}
+
+- (void)viewDidDisappear:(BOOL)animated {
+#ifdef DEBUG
+    NSLog(@"%s", __FUNCTION__);
+#endif
 }
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
@@ -82,14 +109,22 @@
 }
 
 -  (BOOL)webView:(UIWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(UIWebViewNavigationType)navigationType {
-    NSString *title = [request.URL absoluteString];
-    if (![self.title isEqualToString:title]) {
+    
+    if (navigationType != UIWebViewNavigationTypeOther) {
+        NSString *title = [request.URL absoluteString];
         self.title = title;
-    }
-    if (navigationType == UIWebViewNavigationTypeLinkClicked)
+        
         self.textField.text = title;
+    }
     
     return YES;
+}
+
+- (void)webViewDidStartLoad:(UIWebView *)webView {
+    NSString *title = [self.webView.request.URL absoluteString];
+    self.title = title;
+    
+    self.textField.text = title;
 }
 
 - (void)textFieldDidEndEditing:(UITextField *)textField {
@@ -98,6 +133,7 @@
         text = [NSString stringWithFormat:@"http://%@", text];
     }
     
+    self.title = text;
     NSURL *url = [NSURL URLWithString:text];
     NSURLRequest *request = [NSURLRequest requestWithURL:url 
                                              cachePolicy:NSURLCacheStorageAllowedInMemoryOnly 
@@ -109,25 +145,18 @@
     [textField resignFirstResponder];
     return YES;
 }
-                             
-- (IBAction)remove:(id)sender {
-    SGTabsViewController *tabs = (SGTabsViewController *) self.parentViewController;
-    [tabs removeViewController:self];
-}
 
 - (IBAction)reload:(id)sender {
     [self.webView reload];
 }
 
 - (IBAction)add:(id)sender {
-    SGTabsViewController *tabs = (SGTabsViewController *) self.parentViewController;
 
     SGViewController *vc = [[SGViewController alloc] 
                             initWithNibName:NSStringFromClass([SGViewController class]) 
                             bundle:nil];
-    vc.title = [NSString stringWithFormat:@"Tab %i contents!", tabs.count+1];
-    [tabs addTab:vc];
+    vc.title = [NSString stringWithFormat:@"Tab %i contents!", self.tabsViewController.count+1];
+    [self.tabsViewController addTab:vc];
     
 }
-
 @end
